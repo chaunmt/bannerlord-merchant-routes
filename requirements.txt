@@ -1,0 +1,5 @@
+psycopg[binary]
+questionary
+rich
+tabulate
+python-dotenv

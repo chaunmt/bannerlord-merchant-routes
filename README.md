@@ -6,7 +6,36 @@
 
 A helping tool for the merchants of Mount &amp; Blade II: Bannerlord
 
-## Data Model
+## 🏃 Start
+- Create the database following the provided graph. Consistent data are provided in public folder.
+- Create a .env following the provided .env.example format
+- Install dependency:
+```
+pip install -r requirements.txt
+```
+- Run:
+```
+python -m src.main
+```
+
+## 🚀 Features
+
+1. **Record Market Trades**
+   - Capture item trades with buy/sell towns, prices, and notes (auto profit calculation)
+   - *TODO: turn note into a true in-game date system*
+
+2. **Search & Filter Records**
+   - View all records or filter by town with buy/sell role context
+   - *TODO: pagination in coming*
+
+3. **Edit Market Records**
+   - Update notes for existing entries with immediate feedback
+   - *TODO: more edit options incoming*
+
+4. **Dynamic Data Entry**
+   - Create new items and item types seamlessly during workflows
+
+## 📚 Data Model
 
 ```mermaid
 erDiagram
@@ -65,20 +94,3 @@ erDiagram
     TOWN ||--o{ MARKETRECORD : "buytown"
     TOWN ||--o{ MARKETRECORD : "selltown"
 ```
-
-## 🚀 Features
-
-1. **Record Market Trades**
-   - Capture item trades with buy/sell towns, prices, and notes (auto profit calculation)
-   - *TODO: turn note into a true in-game date system*
-
-2. **Search & Filter Records**
-   - View all records or filter by town with buy/sell role context
-   - *TODO: pagination in coming*
-
-3. **Edit Market Records**
-   - Update notes for existing entries with immediate feedback
-   - *TODO: more edit options incoming*
-
-4. **Dynamic Data Entry**
-   - Create new items and item types seamlessly during workflows
