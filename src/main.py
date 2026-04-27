@@ -90,51 +90,66 @@ def select_or_create_entity(entity_type, prompt=None, allow_create=False):
             return create_entity(entity_type)
         
 def select_marketrecord():
-    headers, query, params = build_marketrecord_query()
+    headers, query, params = build_marketrecord_query(getid=True)
     cur.execute(query, params)
     rows = cur.fetchall()
 
     choices = []
+    index_to_id = {}
 
-    for marketrecordid, item, buytown, selltown, buy, sell, profit, note, updated in rows:
-        choices.append(
-            questionary.Choice(
-                title=f"{item} | {buytown} → {selltown} | Profit: {profit} | Note: {note} | Updated: {updated}",
-                value=marketrecordid
-            )
-        )
+    for idx, row in enumerate(rows, start=1):
+        marketrecordid, item, buytown, selltown, buy, sell, profit, season, day, year = row
+
+        label = f"[{idx}] {item} | {buytown} → {selltown} | Profit: {profit} | Date: {season} {day}, {year}"
+        choices.append(label)
+        index_to_id[label] = marketrecordid
 
     selected = questionary.select(
-        "Select market record to edit:",
-        choices=choices,
-        use_indicator=True
+        "Select market record:",
+        choices=choices
     ).ask()
 
-    return selected
+    if not selected:
+        return None
+
+    return index_to_id[selected]
+
+def select_season():
+    query = f"select name from season"
+    cur.execute(query)
+    rows = cur.fetchall()
+
+    seasons = [name for (name,) in rows]
+
+    selected = questionary.autocomplete("Search season:", choices=seasons).ask()
+
+    if selected in seasons:
+        return selected
+
+    print("No valid season selected.\n")
 
 #===========================================================================================#
 #-------------------------------------- QUERY SERVICE --------------------------------------#
 #===========================================================================================#
 
-def build_marketrecord_query(include_role=False, townid=None, marketrecordid=None):
-    headers = ["ID"]
+def build_marketrecord_query(getid=False, townid=None, marketrecordid=None, itemid=None):
+    headers = []
     conditions = []
     params = {}
-
-    query = "select m.marketrecordid,"
-    if townid and include_role:
-        query = query + "\n(case when m.buytownid = %(townid)s then 'BUY' else 'SELL' end) as role,\n"
-        headers.append("Role")
+    query = "select "
+    if getid:
+        query += "m.marketrecordid as id,"
 
     query = query + """
-        i.name  as itemname,
-        bt.name as buytown,
-        st.name as selltown,
-        m.buyprice as cost,
-        m.sellprice as revenue,
-        m.profit as profit,
-        m.note as note,
-        m.updatedts as updated
+           i.name       as itemname,
+           bt.name      as buytown,
+           st.name      as selltown,
+           m.buyprice   as cost,
+           m.sellprice  as revenue,
+           m.profit     as profit,
+           m.season     as season,
+           m.day        as day,
+           m.year       as year
     from marketrecord m
         inner join item i on m.itemid = i.itemid
         inner join town bt on bt.townid = m.buytownid
@@ -147,15 +162,41 @@ def build_marketrecord_query(include_role=False, townid=None, marketrecordid=Non
     if marketrecordid:
         conditions.append("(m.marketrecordid = %(marketrecordid)s)")
         params["marketrecordid"] = marketrecordid
+    if itemid:
+        conditions.append("(m.itemid = %(itemid)s)")
+        params["itemid"] = itemid
 
     if conditions:
         query += "\nwhere " + "\nand ".join(conditions)
 
-    query += "\norder by profit desc, updated desc, itemname asc"
+    query += """
+    order by profit desc,
+             year desc,
+             case season
+                when 'Spring' then 1
+                when 'Summer' then 2
+                when 'Autumn' then 3
+                when 'Winter' then 4
+             end desc,
+             day desc,
+             itemname desc;
+    """
 
-    headers.extend(["Item","Buy Town","Sell Town","Cost","Revenue","Profit","Note","Updated"])
+    if getid:
+        headers.append("ID")
+    headers.extend(["Item", "Buy Town", "Sell Town", "Cost", "Revenue", "Profit", "Season", "Day", "Year"])
 
     return headers, query, params
+
+def get_and_print_table(headers, query, params):
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    print(tabulate(
+        headers=headers,
+        tabular_data=rows,
+        tablefmt="psql"
+    ))
+    return rows
 
 #===========================================================================================#
 #------------------------------ FEATURE 1: RECORD MARKET INFO ------------------------------#
@@ -168,50 +209,59 @@ def write_marketrecord():
 
             confirm = False
 
-            while not confirm:
-                itemid = select_or_create_entity(ITEM, allow_create=True)
-                if not itemid:
-                    raise KeyboardInterrupt
-                
-                buytownid = select_or_create_entity(TOWN, prompt="Search town buy from:")
-                if not buytownid:
-                    raise KeyboardInterrupt
-                
-                selltownid = select_or_create_entity(TOWN, prompt="Search town sell at:")
-                if not selltownid:
-                    raise KeyboardInterrupt
-                
-                buyprice = questionary.text("Buy price:").ask()
-                if not buyprice:
-                    raise KeyboardInterrupt
-                
-                sellprice = questionary.text("Sell price:").ask()
-                if not sellprice:
-                    raise KeyboardInterrupt
+            itemid = select_or_create_entity(ITEM, allow_create=True)
+            if not itemid:
+                raise KeyboardInterrupt
+            
+            buytownid = select_or_create_entity(TOWN, prompt="Search town buy from:")
+            if not buytownid:
+                raise KeyboardInterrupt
+            
+            selltownid = select_or_create_entity(TOWN, prompt="Search town sell at:")
+            if not selltownid:
+                raise KeyboardInterrupt
+            
+            buyprice = questionary.text("Buy price:").ask()
+            if not buyprice:
+                raise KeyboardInterrupt
+            
+            sellprice = questionary.text("Sell price:").ask()
+            if not sellprice:
+                raise KeyboardInterrupt
 
-                note = questionary.text("Note (optional):").ask()
-                if not note:
-                    note = ""
+            season = select_season()
+            if not season:
+                raise KeyboardInterrupt
+            
+            day = questionary.text("Day:").ask()
+            if not day:
+                raise KeyboardInterrupt
+            
+            year = questionary.text("Year:").ask()
+            if not year:
+                raise KeyboardInterrupt
 
-                # Confirm
-                confirm = questionary.confirm("Save record?").ask()
-                if not confirm:
-                    print("\nOk, try again\n")
+            # Confirm
+            confirm = questionary.confirm("Save record?").ask()
+            if confirm:
 
-            # Insert
-            cur.execute("""
-                insert into marketrecord (itemid, buytownid, selltownid, buyprice, sellprice, note)
-                values (%s, %s, %s, %s, %s, %s)
-                returning marketrecordid
-            """, (itemid, buytownid, selltownid, int(buyprice), int(sellprice), note))            
+                # Insert
+                cur.execute("""
+                    insert into marketrecord (itemid, buytownid, selltownid, buyprice, sellprice, season, day, year)
+                    values (%s, %s, %s, %s, %s, %s, %s, %s)
+                    returning marketrecordid
+                """, (itemid, buytownid, selltownid, int(buyprice), int(sellprice), season, int(day), int(year)))            
 
-            # Print out record just save
-            marketrecordid = cur.fetchone()[0]
-            if marketrecordid:
-                print("\nMarket record saved!\n")
-                find_marketrecords_by_id(marketrecordid)
+                # Print out record just save
+                marketrecordid = cur.fetchone()[0]
+                if marketrecordid:
+                    print("\nMarket record saved!\n")
+                    find_marketrecords_by_id(marketrecordid)
+                else:
+                    print("\nUnable to save market record\n")
+
             else:
-                print("\nUnable to save market record\n")
+                print("\nOk, try again\n")
 
         except KeyboardInterrupt:
             print("\n...Returning to main menu...\n")
@@ -222,37 +272,23 @@ def write_marketrecord():
 #===========================================================================================#
 def find_all_marketrecords():
     headers, query, params = build_marketrecord_query()
-    cur.execute(query, params)
-    rows = cur.fetchall()
-    print(tabulate(
-        headers=headers,
-        tabular_data=rows,
-        tablefmt="psql"
-    ))
-    return rows
+    return get_and_print_table(headers, query, params)
 
 def find_marketrecords_by_town():
     townid = select_or_create_entity(TOWN)
     if townid:
-        headers, query, params = build_marketrecord_query(include_role=True, townid=townid)
-        cur.execute(query, params)
-        rows = cur.fetchall()
-        print(tabulate(
-            headers=headers,
-            tabular_data=rows,
-            tablefmt="psql"
-        ))
-        return rows
+        headers, query, params = build_marketrecord_query(townid=townid)
+        return get_and_print_table(headers, query, params)
+    
+def find_marketrecords_by_item():
+    itemid = select_or_create_entity(ITEM)
+    if itemid:
+        headers, query, params = build_marketrecord_query(itemid=itemid)
+        return get_and_print_table(headers, query, params)
 
 def find_marketrecords_by_id(marketrecordid):
     headers, query, params = build_marketrecord_query(marketrecordid=marketrecordid)
-    cur.execute(query, params)
-    rows = cur.fetchall()
-    print(tabulate(
-        headers=headers,
-        tabular_data=rows,
-        tablefmt="psql"
-    ))
+    rows = get_and_print_table(headers, query, params)
     return rows[0] if rows else None
 
 def find_marketrecords():
@@ -263,7 +299,8 @@ def find_marketrecords():
 
             choice = questionary.select("Filter market records by:",
                                         choices=["1. All records",
-                                                "2. By town"]).ask()
+                                                 "2. By town",
+                                                 "3. By item"]).ask()
             if not choice:
                 raise KeyboardInterrupt
             
@@ -273,45 +310,44 @@ def find_marketrecords():
             elif choice.startswith("2"):
                 find_marketrecords_by_town()
 
+            elif choice.startswith("3"):
+                find_marketrecords_by_item()
+
         except KeyboardInterrupt:
             print("\n...Returning to main menu...\n")
             break
 
 #===========================================================================================#
-#----------------------------- FEATURE 3: EDIT A MARKET RECORD -----------------------------#
+#----------------------------- FEATURE 3: DELETE A MARKET RECORD -----------------------------#
 #===========================================================================================#
-def edit_marketrecord():
-    print("\n[green]=== Edit Market Record ===[/green]\n")
-    print("[dim](Ctrl+C = cancel or back to menu)[/dim]\n")
+def delete_marketrecord():
+    while True:
+        try:
+            print("\n[green]=== Edit Market Record ===[/green]\n")
+            print("[dim](Ctrl+C = cancel or back to menu)[/dim]\n")
 
-    marketrecordid = select_marketrecord()
-    if not marketrecordid:
-        print("No market record selected")
-        return
+            marketrecordid = select_marketrecord()
+            if not marketrecordid:
+                print("No market record selected")
+                return
 
-    record = find_marketrecords_by_id(marketrecordid)
-    if not record:
-        print("Record not found")
-        return
-    
-    note = record[-2]
+            record = find_marketrecords_by_id(marketrecordid)
+            if not record:
+                print("Record not found")
+                return
 
-    new_note = questionary.text(
-        "Edit note:",
-        default=note or ""
-    ).ask()
+            # Confirm
+            confirm = questionary.confirm("[red]Delete record?[/red]").ask()
+            if confirm:
+                # Delete
+                cur.execute("delete from marketrecord where marketrecordid = %s", (marketrecordid,))
+                print("\nMarket record deleted!\n")
+            else:
+                print("\nOk, try again\n")
 
-    if new_note is None:
-        return
-
-    cur.execute("""
-        update marketrecord
-        set note = %s
-        where marketrecordid = %s
-    """, (new_note, marketrecordid))
-
-    print("\nMarket record updated!\n")
-    find_marketrecords_by_id(marketrecordid)
+        except KeyboardInterrupt:
+            print("\n...Returning to main menu...\n")
+            break
 
 #===========================================================================================#
 #---------------------------------------- MAIN MENU ----------------------------------------#
@@ -325,7 +361,7 @@ def main():
             choice = questionary.select("What do you want to do?", 
                                         choices=["1. Record market information",
                                                  "2. Find market records",
-                                                 "3. Edit a market record"]).ask()
+                                                 "3. Delete a market record"]).ask()
 
             if not choice:
                 raise KeyboardInterrupt
@@ -337,7 +373,7 @@ def main():
                 find_marketrecords()
 
             elif choice.startswith("3"):
-                edit_marketrecord()
+                delete_marketrecord()
 
             else:
                 print("Invalid selection")

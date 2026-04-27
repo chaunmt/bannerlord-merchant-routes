@@ -3,6 +3,7 @@
 ![Selectable](https://img.shields.io/badge/Selectable-green)
 ![Colorful CLI](https://img.shields.io/badge/Colorful_CLI-red)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791)
+![Python](https://img.shields.io/badge/Python-336791)
 
 A helping tool for the merchants of Mount &amp; Blade II: Bannerlord
 
@@ -21,16 +22,13 @@ python -m src.main
 ## 🚀 Features
 
 1. **Record Market Trades**
-   - Capture item trades with buy/sell towns, prices, and notes (auto profit calculation)
-   - *TODO: turn note into a true in-game date system*
+   - Capture item trades with buy/sell towns, prices, auto-calculated profit, in-game date time
 
 2. **Search & Filter Records**
-   - View all records or filter by town with buy/sell role context
-   - *TODO: pagination in coming*
+   - View all records or filter by town/item sorted by profit and in-game date time
 
-3. **Edit Market Records**
-   - Update notes for existing entries with immediate feedback
-   - *TODO: more edit options incoming*
+3. **Delete A Market Record**
+   - Select record to delete
 
 4. **Dynamic Data Entry**
    - Create new items and item types seamlessly during workflows
@@ -63,7 +61,9 @@ erDiagram
         int buyprice
         int sellprice
         int profit
-        text note
+        text season
+        int day
+        int year
         timestamp createdts
         timestamp updatedts
     }
@@ -79,18 +79,26 @@ erDiagram
         int townid PK
         text name
         int regionid FK
-        timestamptz createdts
-        timestamptz updatedts
+        timestamp createdts
+        timestamp updatedts
+    }
+
+    SEASON {
+        text name PK
+        timestamp createdts
+        timestamp updatedts
     }
 
     %% Relationships
 
-    ITEMTYPE ||--o{ ITEM : "has"
+    ITEMTYPE ||--o{ ITEM : has
 
-    ITEM ||--o{ MARKETRECORD : "traded in"
+    ITEM ||--o{ MARKETRECORD : traded_in
 
-    REGION ||--o{ TOWN : "contains"
+    REGION ||--o{ TOWN : contains
 
-    TOWN ||--o{ MARKETRECORD : "buytown"
-    TOWN ||--o{ MARKETRECORD : "selltown"
+    TOWN ||--o{ MARKETRECORD : buytown
+    TOWN ||--o{ MARKETRECORD : selltown
+
+    SEASON ||--o{ MARKETRECORD : time
 ```
