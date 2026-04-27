@@ -94,3 +94,12 @@ erDiagram
     TOWN ||--o{ MARKETRECORD : "buytown"
     TOWN ||--o{ MARKETRECORD : "selltown"
 ```
+
+## 🖼️ Sample Image
+
+<img width="345" height="137" alt="image" src="https://github.com/user-attachments/assets/27ca6e24-9d36-4741-8743-d452a9cc0c16" />
+<img width="297" height="141" alt="image" src="https://github.com/user-attachments/assets/c99354a5-e6db-451a-8714-f84205c339c7" />
+<img width="980" height="351" alt="image" src="https://github.com/user-attachments/assets/34e58fd4-6be2-4ba7-95b5-a88988fb54fb" />
+<img width="873" height="293" alt="image" src="https://github.com/user-attachments/assets/8f47773a-9f81-4c5b-8d70-e461a713233a" />
+
+
