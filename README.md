@@ -1,4 +1,4 @@
-# bannerlord-merchant-routes
+# Bannerlord Merchan Routes
 ![Autocomplete](https://img.shields.io/badge/Autocomplete-blue)
 ![Selectable](https://img.shields.io/badge/Selectable-green)
 ![Colorful CLI](https://img.shields.io/badge/Colorful_CLI-red)
@@ -102,3 +102,5 @@ erDiagram
 
     SEASON ||--o{ MARKETRECORD : time
 ```
+
+## 🖼️ Sample Image
