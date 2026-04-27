@@ -2,7 +2,7 @@
 ![Autocomplete](https://img.shields.io/badge/Autocomplete-blue)
 ![Selectable](https://img.shields.io/badge/Selectable-green)
 ![Colorful CLI](https://img.shields.io/badge/Colorful_CLI-red)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791)
+![Python](https://img.shields.io/badge/Python-336791)
 
 A helping tool for the merchants of Mount &amp; Blade II: Bannerlord
 
