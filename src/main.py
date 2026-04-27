@@ -323,7 +323,7 @@ def find_marketrecords():
 def delete_marketrecord():
     while True:
         try:
-            print("\n[green]=== Edit Market Record ===[/green]\n")
+            print("\n[green]=== Delete A Market Record ===[/green]\n")
             print("[dim](Ctrl+C = cancel or back to menu)[/dim]\n")
 
             marketrecordid = select_marketrecord()
@@ -337,7 +337,7 @@ def delete_marketrecord():
                 return
 
             # Confirm
-            confirm = questionary.confirm("[red]Delete record?[/red]").ask()
+            confirm = questionary.confirm("Delete record?").ask()
             if confirm:
                 # Delete
                 cur.execute("delete from marketrecord where marketrecordid = %s", (marketrecordid,))
