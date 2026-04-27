@@ -79,8 +79,8 @@ erDiagram
         int townid PK
         text name
         int regionid FK
-        timestamptz createdts
-        timestamptz updatedts
+        timestamp createdts
+        timestamp updatedts
     }
 
     %% Relationships
